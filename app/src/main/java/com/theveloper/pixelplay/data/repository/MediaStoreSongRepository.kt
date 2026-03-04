@@ -14,6 +14,7 @@ import com.theveloper.pixelplay.data.database.toSong
 import com.theveloper.pixelplay.data.model.Song
 import com.theveloper.pixelplay.data.observer.MediaStoreObserver
 import com.theveloper.pixelplay.data.preferences.UserPreferencesRepository
+import com.theveloper.pixelplay.utils.AlbumArtUtils
 import com.theveloper.pixelplay.utils.DirectoryRuleResolver
 import com.theveloper.pixelplay.utils.DirectoryFilterUtils
 import com.theveloper.pixelplay.utils.LogUtils
@@ -169,6 +170,7 @@ class MediaStoreSongRepository @Inject constructor(
 
                     val id = cursor.getLong(idCol)
                     val albumId = cursor.getLong(albumIdCol)
+                    val albumArtUriString = AlbumArtUtils.getCachedAlbumArtUri(context, id)?.toString()
 
                     val song = Song(
                         id = id.toString(),
@@ -181,10 +183,7 @@ class MediaStoreSongRepository @Inject constructor(
                         albumArtist = if (albumArtistCol != -1) cursor.getString(albumArtistCol).normalizeMetadataText() else null,
                         path = path,
                         contentUriString = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id).toString(),
-                        albumArtUriString = ContentUris.withAppendedId(
-                            android.net.Uri.parse("content://media/external/audio/albumart"),
-                            albumId
-                        ).toString(),
+                        albumArtUriString = albumArtUriString,
                         duration = cursor.getLong(durationCol),
                         genre = songIdToGenreMap[id],
                         lyrics = null,

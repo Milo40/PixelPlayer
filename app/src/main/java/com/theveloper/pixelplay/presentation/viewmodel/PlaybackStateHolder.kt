@@ -726,6 +726,7 @@ class PlaybackStateHolder @Inject constructor(
             preparedQueue.targetIndex,
             currentPosition
         )
+
         if (shouldResumePlayback) {
             masterPlayer.playWhenReady = true
             if (!masterPlayer.isPlaying) {
@@ -763,7 +764,7 @@ class PlaybackStateHolder @Inject constructor(
                     shuffleToggleJob = null
                 }
             }
-        } else {
+         } else {
             shuffleToggleJob = coroutineScope.launch {
                 _stablePlayerState.update { it.copy(isShuffleTransitionInProgress = true) }
                 try {

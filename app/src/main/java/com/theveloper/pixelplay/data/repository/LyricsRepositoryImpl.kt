@@ -746,9 +746,11 @@ class LyricsRepositoryImpl @Inject constructor(
             if (words.isNullOrEmpty()) {
                 linePrefix + line.line
             } else {
-                val wordsPart = words.joinToString("") { word ->
-                    "<${formatTimestamp(word.time)}>${word.word}"
+                val wordsPart = words.mapIndexed { index, word ->
+                    val separator = if (index > 0 && word.startsNewWord) " " else ""
+                    "$separator<${formatTimestamp(word.time)}>${word.word}"
                 }
+                    .joinToString("")
                 linePrefix + wordsPart
             }
         }

@@ -1140,6 +1140,9 @@ fun LyricLineRow(
     val sanitizedWords = remember(line.words) {
         line.words?.let(::sanitizeSyncedWords)
     }
+    val sanitizedWordClusters = remember(sanitizedWords) {
+        sanitizedWords?.takeIf { it.isNotEmpty() }?.let(::clusterSyncedWords)
+    }
     val lineEndTime = remember(line, nextTime) {
         resolveLineEndTimeMs(line, nextTime)
     }
@@ -1263,7 +1266,7 @@ fun LyricLineRow(
         else -> Alignment.TopStart
     }
 
-    if (sanitizedWords.isNullOrEmpty()) {
+    if (sanitizedWordClusters.isNullOrEmpty()) {
         Column(
             modifier = animatedModifier
                 .clip(RoundedCornerShape(12.dp))
@@ -1313,7 +1316,7 @@ fun LyricLineRow(
         val highlightedWordIndex by remember(position, sanitizedWords, line.time, lineEndTime) {
             derivedStateOf {
                 resolveHighlightedWordIndex(
-                    words = sanitizedWords,
+                    words = requireNotNull(sanitizedWords),
                     positionMs = position,
                     lineStartTimeMs = line.time.toLong(),
                     lineEndTimeMs = lineEndTime
@@ -1330,22 +1333,29 @@ fun LyricLineRow(
         ) {
             FlowRow(
                 horizontalArrangement = when (lyricsAlignment) {
-                    "center" -> Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-                    "right" -> Arrangement.spacedBy(6.dp, Alignment.End)
-                    else -> Arrangement.spacedBy(6.dp, Alignment.Start)
+                    "center" -> Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally)
+                    "right" -> Arrangement.spacedBy(3.dp, Alignment.End)
+                    else -> Arrangement.spacedBy(3.dp, Alignment.Start)
                 },
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                sanitizedWords.forEachIndexed { wordIndex, word ->
-                    key("${line.time}_${word.time}_${word.word}") {
-                        LyricWordSpan(
-                            word = word,
-                            isHighlighted = isCurrentLine && wordIndex == highlightedWordIndex,
-                            useAnimatedLyrics = useAnimatedLyrics,
-                            style = style,
-                            highlightedColor = accentColor,
-                            unhighlightedColor = unhighlightedColor
-                        )
+                sanitizedWordClusters.forEach { cluster ->
+                    key("${line.time}_${cluster.startIndex}") {
+                        Row {
+                            cluster.words.forEachIndexed { clusterOffset, word ->
+                                val wordIndex = cluster.startIndex + clusterOffset
+                                key("${line.time}_${word.time}_${word.word}_$wordIndex") {
+                                    LyricWordSpan(
+                                        word = word,
+                                        isHighlighted = isCurrentLine && wordIndex == highlightedWordIndex,
+                                        useAnimatedLyrics = useAnimatedLyrics,
+                                        style = style,
+                                        highlightedColor = accentColor,
+                                        unhighlightedColor = unhighlightedColor
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1495,22 +1505,49 @@ internal fun sanitizeLyricLineText(raw: String): String =
 internal fun sanitizeSyncedWords(words: List<SyncedWord>): List<SyncedWord> =
     buildList {
         words.forEachIndexed { index, word ->
-        val sanitized = if (index == 0) LeadingTagRegex.replace(word.word, "") else word.word
-            if (sanitized.isEmpty()) return@forEachIndexed
+            val sanitized = if (index == 0) LeadingTagRegex.replace(word.word, "") else word.word
+            val normalized = sanitized.trim()
+            if (normalized.isEmpty()) return@forEachIndexed
 
-            // Avoid invisible timed tokens stealing highlight from visible words.
-            if (sanitized.isBlank()) {
-                val lastIndex = this.lastIndex
-                if (lastIndex >= 0) {
-                    val previous = this[lastIndex]
-                    this[lastIndex] = previous.copy(word = previous.word + sanitized)
-                }
-                return@forEachIndexed
-            }
-
-            add(word.copy(word = sanitized))
+            add(
+                word.copy(
+                    word = normalized,
+                    startsNewWord = if (isEmpty()) true else word.startsNewWord
+                )
+            )
         }
     }
+
+internal data class SyncedWordCluster(
+    val startIndex: Int,
+    val words: List<SyncedWord>
+)
+
+internal fun clusterSyncedWords(words: List<SyncedWord>): List<SyncedWordCluster> {
+    if (words.isEmpty()) return emptyList()
+
+    val clusters = mutableListOf<SyncedWordCluster>()
+    var currentWords = mutableListOf<SyncedWord>()
+    var currentStartIndex = 0
+
+    words.forEachIndexed { index, word ->
+        if (word.startsNewWord && currentWords.isNotEmpty()) {
+            clusters += SyncedWordCluster(startIndex = currentStartIndex, words = currentWords.toList())
+            currentWords = mutableListOf()
+            currentStartIndex = index
+        } else if (currentWords.isEmpty()) {
+            currentStartIndex = index
+        }
+
+        currentWords += word
+    }
+
+    if (currentWords.isNotEmpty()) {
+        clusters += SyncedWordCluster(startIndex = currentStartIndex, words = currentWords.toList())
+    }
+
+    return clusters
+}
 
 internal fun normalizeWordEndTime(
     currentWordTimeMs: Long,

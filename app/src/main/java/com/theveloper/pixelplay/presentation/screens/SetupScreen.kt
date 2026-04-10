@@ -210,6 +210,14 @@ fun SetupScreen(
     val currentPage = pages[pagerState.currentPage]
     val isNextButtonEnabled = isPermissionGateSatisfied(context, currentPage, uiState)
     var previousPageIndex by remember { mutableStateOf(0) }
+    val navigateToPage: (Int) -> Unit = { targetPage ->
+        scope.launch {
+            val boundedPage = targetPage.coerceIn(0, pages.lastIndex)
+            if (boundedPage != pagerState.currentPage) {
+                pagerState.animateScrollToPage(boundedPage)
+            }
+        }
+    }
 
     val directorySelectionPageIndex = remember(pages) { pages.indexOf(SetupPage.DirectorySelection) }
     val batteryOptimizationPageIndex = remember(pages) { pages.indexOf(SetupPage.BatteryOptimization) }
@@ -265,9 +273,7 @@ fun SetupScreen(
     }
     BackHandler {
         if (pagerState.currentPage > 0) {
-            scope.launch {
-                pagerState.animateScrollToPage(pagerState.currentPage - 1)
-            }
+            navigateToPage(pagerState.currentPage - 1)
         }
     }
     Scaffold(
@@ -280,9 +286,7 @@ fun SetupScreen(
                 onNextClicked = {
                     val page = pages[pagerState.currentPage]
                     if (isPermissionGateSatisfied(context, page, uiState)) {
-                        scope.launch {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        }
+                        navigateToPage(pagerState.currentPage + 1)
                     } else {
                         setupViewModel.checkPermissions(context)
                         Toast.makeText(context, "Please grant the required permission first.", Toast.LENGTH_SHORT).show()
@@ -302,6 +306,9 @@ fun SetupScreen(
     ) { paddingValues ->
         HorizontalPager(
             state = pagerState,
+            // Keep setup progression deterministic; free swiping was allowing users
+            // to jump across optional pages after the first permission dialog.
+            userScrollEnabled = false,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -330,9 +337,7 @@ fun SetupScreen(
                         onSkip = {
                             setupViewModel.clearRestorePlan()
                             selectedBackupUri = null
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
+                            navigateToPage(pagerState.currentPage + 1)
                         }
                     )
                     SetupPage.DirectorySelection -> DirectorySelectionPage(
@@ -352,9 +357,7 @@ fun SetupScreen(
                         onRefresh = setupViewModel::refreshCurrentDirectory,
                         onPrimeExplorer = setupViewModel::primeExplorer,
                         onSkip = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
+                            navigateToPage(pagerState.currentPage + 1)
                         },
                         onToggleAllowed = setupViewModel::toggleDirectoryAllowed,
                         onSelectionFinished = setupViewModel::applyPendingDirectoryRuleChanges,
@@ -367,16 +370,12 @@ fun SetupScreen(
                     SetupPage.AlarmsPermission -> AlarmsPermissionPage(
                         uiState = uiState,
                         onSkip = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
+                            navigateToPage(pagerState.currentPage + 1)
                         }
                     )
                     SetupPage.BatteryOptimization -> BatteryOptimizationPage(
                         onSkip = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
+                            navigateToPage(pagerState.currentPage + 1)
                         }
                     )
                     SetupPage.ThemeSelection -> ThemeSelectionPage(
@@ -388,9 +387,7 @@ fun SetupScreen(
                         uiState = uiState,
                         onModeSelected = setupViewModel::setLibraryNavigationMode,
                         onSkip = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
+                            navigateToPage(pagerState.currentPage + 1)
                         }
                     )
                     SetupPage.NavBarLayout -> NavBarLayoutPage(
@@ -398,9 +395,7 @@ fun SetupScreen(
                         onModeSelected = setupViewModel::setNavBarStyle,
                         onCustomizeRadius = { showCornerRadiusOverlay = true },
                         onSkip = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
+                            navigateToPage(pagerState.currentPage + 1)
                         }
                     )
                 }

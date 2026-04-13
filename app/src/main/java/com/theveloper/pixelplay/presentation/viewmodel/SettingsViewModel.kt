@@ -79,7 +79,6 @@ data class SettingsUiState(
     val beta05CleanInstallDisclaimerDismissed: Boolean? = null,
     val fullPlayerLoadingTweaks: FullPlayerLoadingTweaks = FullPlayerLoadingTweaks(),
     val showPlayerFileInfo: Boolean = true,
-    val usePlayerSheetV2: Boolean = true,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.MEDIUM,
     val tapBackgroundClosesPlayer: Boolean = false,
@@ -591,12 +590,6 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            userPreferencesRepository.usePlayerSheetV2Flow.collect { enabled ->
-                _uiState.update { it.copy(usePlayerSheetV2 = enabled) }
-            }
-        }
-
-        viewModelScope.launch {
             userPreferencesRepository.useAnimatedLyricsFlow.collect { enabled ->
                 _uiState.update { it.copy(useAnimatedLyrics = enabled) }
             }
@@ -932,12 +925,6 @@ class SettingsViewModel @Inject constructor(
     fun setFullPlayerCloseThreshold(thresholdPercent: Int) {
         viewModelScope.launch {
             userPreferencesRepository.setFullPlayerCloseThreshold(thresholdPercent)
-        }
-    }
-
-    fun setUsePlayerSheetV2(enabled: Boolean) {
-        viewModelScope.launch {
-            userPreferencesRepository.setUsePlayerSheetV2(enabled)
         }
     }
 

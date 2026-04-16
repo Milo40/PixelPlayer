@@ -348,6 +348,12 @@ class MusicService : MediaLibraryService() {
         }
 
         serviceScope.launch {
+            userPreferencesRepository.hiFiModeEnabledFlow.collect { enabled ->
+                engine.setHiFiMode(enabled)
+            }
+        }
+
+        serviceScope.launch {
             userPreferencesRepository.resumeOnHeadsetReconnectFlow.collect { enabled ->
                 resumeOnHeadsetReconnectEnabled = enabled
                 if (!enabled) {

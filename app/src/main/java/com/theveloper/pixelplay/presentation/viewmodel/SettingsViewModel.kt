@@ -66,6 +66,7 @@ data class SettingsUiState(
     val resumeOnHeadsetReconnect: Boolean = false,
     val showQueueHistory: Boolean = true,
     val isCrossfadeEnabled: Boolean = false,
+    val hiFiModeEnabled: Boolean = false,
     val crossfadeDuration: Int = 2000,
     val persistentShuffleEnabled: Boolean = false,
     val folderBackGestureNavigation: Boolean = true,
@@ -146,6 +147,7 @@ private sealed interface SettingsUiUpdate {
         val resumeOnHeadsetReconnect: Boolean,
         val showQueueHistory: Boolean,
         val isCrossfadeEnabled: Boolean,
+        val hiFiModeEnabled: Boolean,
         val crossfadeDuration: Int,
         val persistentShuffleEnabled: Boolean,
         val folderBackGestureNavigation: Boolean,
@@ -511,6 +513,7 @@ class SettingsViewModel @Inject constructor(
                 userPreferencesRepository.resumeOnHeadsetReconnectFlow,
                 userPreferencesRepository.showQueueHistoryFlow,
                 userPreferencesRepository.isCrossfadeEnabledFlow,
+                userPreferencesRepository.hiFiModeEnabledFlow,
                 userPreferencesRepository.crossfadeDurationFlow,
                 userPreferencesRepository.persistentShuffleEnabledFlow,
                 userPreferencesRepository.folderBackGestureNavigationFlow,
@@ -529,17 +532,18 @@ class SettingsViewModel @Inject constructor(
                     resumeOnHeadsetReconnect = values[2] as Boolean,
                     showQueueHistory = values[3] as Boolean,
                     isCrossfadeEnabled = values[4] as Boolean,
-                    crossfadeDuration = values[5] as Int,
-                    persistentShuffleEnabled = values[6] as Boolean,
-                    folderBackGestureNavigation = values[7] as Boolean,
-                    lyricsSourcePreference = values[8] as LyricsSourcePreference,
-                    autoScanLrcFiles = values[9] as Boolean,
-                    blockedDirectories = @Suppress("UNCHECKED_CAST") (values[10] as Set<String>),
-                    hapticsEnabled = values[11] as Boolean,
-                    immersiveLyricsEnabled = values[12] as Boolean,
-                    immersiveLyricsTimeout = values[13] as Long,
-                    animatedLyricsBlurEnabled = values[14] as Boolean,
-                    animatedLyricsBlurStrength = values[15] as Float
+                    hiFiModeEnabled = values[5] as Boolean,
+                    crossfadeDuration = values[6] as Int,
+                    persistentShuffleEnabled = values[7] as Boolean,
+                    folderBackGestureNavigation = values[8] as Boolean,
+                    lyricsSourcePreference = values[9] as LyricsSourcePreference,
+                    autoScanLrcFiles = values[10] as Boolean,
+                    blockedDirectories = @Suppress("UNCHECKED_CAST") (values[11] as Set<String>),
+                    hapticsEnabled = values[12] as Boolean,
+                    immersiveLyricsEnabled = values[13] as Boolean,
+                    immersiveLyricsTimeout = values[14] as Long,
+                    animatedLyricsBlurEnabled = values[15] as Boolean,
+                    animatedLyricsBlurStrength = values[16] as Float
                 )
             }.collect { update ->
                 _uiState.update { state ->
@@ -549,6 +553,7 @@ class SettingsViewModel @Inject constructor(
                         resumeOnHeadsetReconnect = update.resumeOnHeadsetReconnect,
                         showQueueHistory = update.showQueueHistory,
                         isCrossfadeEnabled = update.isCrossfadeEnabled,
+                        hiFiModeEnabled = update.hiFiModeEnabled,
                         crossfadeDuration = update.crossfadeDuration,
                         persistentShuffleEnabled = update.persistentShuffleEnabled,
                         folderBackGestureNavigation = update.folderBackGestureNavigation,
@@ -797,6 +802,12 @@ class SettingsViewModel @Inject constructor(
     fun setResumeOnHeadsetReconnect(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setResumeOnHeadsetReconnect(enabled)
+        }
+    }
+
+    fun setHiFiModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHiFiModeEnabled(enabled)
         }
     }
 

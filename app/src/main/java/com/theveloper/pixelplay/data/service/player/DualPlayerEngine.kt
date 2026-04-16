@@ -67,6 +67,8 @@ class DualPlayerEngine @Inject constructor(
     private val connectivityStateHolder: com.theveloper.pixelplay.presentation.viewmodel.ConnectivityStateHolder
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    var hiFiModeEnabled: Boolean = false
+        private set
     private var transitionJob: Job? = null
     private var transitionRunning = false
 
@@ -299,7 +301,7 @@ class DualPlayerEngine @Inject constructor(
             ): AudioSink {
                 // Keep Media3's default renderer wiring intact and only customize the sink.
                 return DefaultAudioSink.Builder(context)
-                    .setEnableFloatOutput(false) // Disable Float output to fix CCodec/Hardware errors on some devices
+                    .setEnableFloatOutput(hiFiModeEnabled)
                     .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
                     .setAudioProcessorChain(
                         // Downsample >192 kHz before AudioTrack to avoid ultra-hi-res device hangs,
@@ -311,7 +313,7 @@ class DualPlayerEngine @Inject constructor(
                     )
                     .build()
             }
-        }.setEnableAudioFloatOutput(false) // Disable Float output helper
+        }.setEnableAudioFloatOutput(hiFiModeEnabled) // Disable Float output helper
          .setMediaCodecSelector(mediaCodecSelector)
          .setEnableDecoderFallback(true)
          .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -396,6 +398,28 @@ class DualPlayerEngine @Inject constructor(
      */
     fun setPauseAtEndOfMediaItems(shouldPause: Boolean) {
         playerA.pauseAtEndOfMediaItems = shouldPause
+    }
+
+    /**
+     * Applies Hi-Fi mode (float output) setting. Rebuilds both players to apply the change.
+     * Must be called from the main thread.
+     */
+    fun setHiFiMode(enabled: Boolean) {
+        if (hiFiModeEnabled == enabled) return
+        hiFiModeEnabled = enabled
+        val wasPlayingA = playerA.isPlaying
+        val positionA = playerA.currentPosition
+        val mediaItemA = playerA.currentMediaItem
+
+        playerA.release()
+        playerB.release()
+        playerA = buildPlayer(handleAudioFocus = false)
+        playerB = buildPlayer(handleAudioFocus = false)
+
+        // Restore listeners
+        onPlayerSwappedListeners.forEach { /* listeners were attached to old instance, caller re-attaches */ }
+
+        Timber.tag("DualPlayerEngine").d("Hi-Fi mode set to $enabled — players rebuilt")
     }
 
     /**

@@ -1340,7 +1340,7 @@ fun LyricLineRow(
                 .padding(vertical = verticalPadding, horizontal = 2.dp),
             horizontalAlignment = horizontalAlignment
         ) {
-            Box(contentAlignment = boxAlignment) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = boxAlignment) {
                 // Invisible bold text to reserve layout space and prevent reflow
                 Text(
                     text = sanitizedLine,
